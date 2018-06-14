@@ -30,6 +30,9 @@ dependencies {
 	// https://mvnrepository.com/artifact/org.projectlombok/lombok
 	compile group: 'org.projectlombok', name: 'lombok', version: '1.18.0'
 
+    // https://mvnrepository.com/artifact/org.springframework/spring-aop
+    //compile group: 'org.springframework', name: 'spring-aop', version: '5.0.7.RELEASE'
+
 
 	testCompile('org.springframework.boot:spring-boot-starter-test')
 }
