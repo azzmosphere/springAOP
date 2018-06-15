@@ -2,18 +2,24 @@ package com.azzmosphere.springaop.springAOP;
 
 
 import com.azzmosphere.springaop.springAOP.domain.Hello;
+import com.azzmosphere.springaop.springAOP.domain.IP;
 import com.azzmosphere.springaop.springAOP.interceptors.OnServiceCompleted;
 import com.azzmosphere.springaop.springAOP.interceptors.TracingAspect;
-import com.azzmosphere.springaop.springAOP.rest.HelloController;
-import com.azzmosphere.springaop.springAOP.rest.HelloControllerImpl;
-import com.azzmosphere.springaop.springAOP.service.HelloService;
-import com.azzmosphere.springaop.springAOP.service.ServiceIface;
+import com.azzmosphere.springaop.springAOP.rest.*;
+import com.azzmosphere.springaop.springAOP.service.*;
 import lombok.extern.java.Log;
 import org.springframework.aop.framework.ProxyFactoryBean;
+import org.springframework.beans.factory.ListableBeanFactory;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.context.annotation.Primary;
 import org.springframework.core.annotation.Order;
+import org.springframework.web.client.RestOperations;
+import org.springframework.web.client.RestTemplate;
+
+import javax.annotation.Resource;
 
 @Log
 @Configuration
@@ -23,6 +29,8 @@ public class SpringAopApplicationConfig {
             "global_MethodBeforeAdvice",
             "global_onServiceCompleted"
     };
+
+    private @Autowired ListableBeanFactory factory;
 
     /**
      * important note is that you should not add a interface for
@@ -41,7 +49,7 @@ public class SpringAopApplicationConfig {
     }
 
     @Bean(name = "global_onServiceCompleted")
-    @Order(value = 0)
+    @Order(value = 1)
     public ProxyFactoryBean globalOnServiceCompleted() {
         log.info("creating service complete advice");
         ProxyFactoryBean proxy = new ProxyFactoryBean();
@@ -51,32 +59,62 @@ public class SpringAopApplicationConfig {
     }
 
 
+    @Bean
+    @Resource
+    @Order(value = 2)
+    public RestOperations restTemplate() {
+        log.info("creating rest template");
+        return new RestTemplate();
+    }
+
     /*
      * Creates HelloService Bean
      */
-    @Bean
-    @Order(value = 1)
+    @Bean(name="helloService")
+    @Resource
+    @Order(value = 3)
     public ProxyFactoryBean helloServiceProxy() {
         log.info("creating hello proxy");
         return initProxy(new ProxyFactoryBean(), ServiceIface.class, new HelloService());
+    }
+
+    @Bean(name="ipService")
+    @Resource
+    @Order(value = 4)
+    public ProxyFactoryBean ipService(@Qualifier("restTemplate") RestOperations restOperations) {
+        log.info("creating IP service");
+        IPService ipService = new IPService();
+        ipService.init(restOperations);
+        return initProxy(new ProxyFactoryBean(), ServiceIface.class, ipService);
     }
 
     /**
      *
      * Proxy for the Hello Service Rest Controller.
      *
-     * @param service
      * @return
      */
     @Bean
-    @Autowired
-    @Order(value = 1)
-    public ProxyFactoryBean helloController(ServiceIface<Hello, Hello> service) {
+    @Order(value = 5)
+    public ProxyFactoryBean helloController(@Qualifier("helloService") HelloServiceIface service) {
         log.info("creating controller");
         ProxyFactoryBean proxy = new ProxyFactoryBean();
         HelloControllerImpl helloController = new HelloControllerImpl();
         helloController.setService(service);
+        //injectService(helloController, "HelloService");
+
         return initProxy(proxy, HelloController.class, helloController);
+    }
+
+    @Bean
+    @Order(value = 6)
+    public ProxyFactoryBean ipController(@Qualifier("ipService") IPServiceIface service) {
+        log.info("creating ip controller");
+        ProxyFactoryBean proxy = new ProxyFactoryBean();
+        IPControllerImpl ipController = new IPControllerImpl();
+        ipController.setService(service);
+        //injectService(ipController, "IPService");
+        return initProxy(proxy, IPController.class, ipController);
     }
 
     /*
@@ -100,5 +138,10 @@ public class SpringAopApplicationConfig {
 
         return proxy;
     }
+
+//    private void injectService(ControllerBase controller, String beanName) {
+//            Object service = factory.getBean(beanName);
+//           controller.setService((ServiceIface) factory.getBean(beanName));
+//    }
 
 }
