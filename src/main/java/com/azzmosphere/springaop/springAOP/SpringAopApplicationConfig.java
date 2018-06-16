@@ -80,6 +80,7 @@ public class SpringAopApplicationConfig {
 
     @Bean(name="ipService")
     @Resource
+    @Autowired
     @Order(value = 4)
     public ProxyFactoryBean ipService(@Qualifier("restTemplate") RestOperations restOperations) {
         log.info("creating IP service");
@@ -95,6 +96,7 @@ public class SpringAopApplicationConfig {
      * @return
      */
     @Bean
+    @Autowired
     @Order(value = 5)
     public ProxyFactoryBean helloController(@Qualifier("helloService") HelloServiceIface service) {
         log.info("creating controller");
@@ -107,6 +109,7 @@ public class SpringAopApplicationConfig {
     }
 
     @Bean
+    @Autowired
     @Order(value = 6)
     public ProxyFactoryBean ipController(@Qualifier("ipService") IPServiceIface service) {
         log.info("creating ip controller");
